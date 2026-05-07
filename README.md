@@ -43,6 +43,33 @@ uvicorn app.main:app --reload
 
 Then run the verification tests from `PROMPT.md`.
 
+## Docker App Stack
+
+The full app can run with Next.js, FastAPI, PostgreSQL, and Redis through Docker
+Compose:
+
+```bash
+docker compose up --build
+```
+
+Services:
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| API | http://localhost:8000 |
+| API docs | http://localhost:8000/docs |
+| PostgreSQL | localhost:5432 |
+| Redis | localhost:6379 |
+
+The frontend runs `npm run dev` in Docker. It proxies `/api/*` to the API
+service through `INTERNAL_BACKEND_BASE_URL`, while browser-visible links still
+use `NEXT_PUBLIC_BACKEND_BASE_URL`.
+
+The API reads `DATABASE_URL`, `REDIS_URL`, and `PUBLIC_BASE_URL` from the Compose
+environment. For non-Docker local development, copy `backend/.env.example` and
+export those variables before starting uvicorn.
+
 ## Bonus Challenges
 
 - Build a simple frontend (input URL → display QR code image)

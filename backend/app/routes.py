@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from .cache import delete_redirect_url, get_redirect_url, set_redirect_url
 from .database import get_db
 from .models import ScanEvent, UrlMapping
 from .schemas import CreateRequest, CreateResponse, QRInfoResponse, UpdateRequest
@@ -15,9 +16,6 @@ from .token_gen import generate_token
 from .url_validator import validate_url
 
 router = APIRouter()
-
-# In-memory cache (simulates Redis for prototype)
-redirect_cache: dict[str, str] = {}
 
 BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
 
@@ -47,8 +45,7 @@ def create_qr(req: CreateRequest, db: Session = Depends(get_db)):
 
     short_url = f"{BASE_URL}/r/{token}"
 
-    # Warm cache
-    redirect_cache[token] = normalized_url
+    set_redirect_url(token, normalized_url)
 
     return CreateResponse(
         token=token,
@@ -60,7 +57,7 @@ def create_qr(req: CreateRequest, db: Session = Depends(get_db)):
 
 @router.get("/r/{token}")
 def redirect(token: str, request: Request, db: Session = Depends(get_db)):
-    cached_url = redirect_cache.get(token)
+    cached_url = get_redirect_url(token)
     if cached_url is not None:
         mapping = db.query(UrlMapping).filter(UrlMapping.token == token).first()
         _ensure_mapping_can_redirect(mapping, token)
@@ -70,7 +67,7 @@ def redirect(token: str, request: Request, db: Session = Depends(get_db)):
     mapping = db.query(UrlMapping).filter(UrlMapping.token == token).first()
     mapping = _ensure_mapping_can_redirect(mapping, token)
 
-    redirect_cache[token] = mapping.original_url
+    set_redirect_url(token, mapping.original_url)
     _record_scan(token, request, db)
     return RedirectResponse(mapping.original_url, status_code=302)
 
@@ -90,13 +87,11 @@ def update_qr(token: str, req: UpdateRequest, db: Session = Depends(get_db)):
             mapping.original_url = validate_url(req.url)
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
-        # Invalidate cache
-        redirect_cache.pop(token, None)
+        delete_redirect_url(token)
 
     if req.expires_at is not None:
         mapping.expires_at = req.expires_at
-        # Invalidate cache
-        redirect_cache.pop(token, None)
+        delete_redirect_url(token)
 
     db.commit()
     db.refresh(mapping)
@@ -108,8 +103,7 @@ def delete_qr(token: str, db: Session = Depends(get_db)):
     mapping = _get_mapping_or_404(token, db)
     mapping.is_deleted = True
     db.commit()
-    # Invalidate cache
-    redirect_cache.pop(token, None)
+    delete_redirect_url(token)
     return {"detail": "Deleted"}
 
 
@@ -157,13 +151,13 @@ def _get_mapping_or_404(token: str, db: Session) -> UrlMapping:
 
 def _ensure_mapping_can_redirect(mapping: UrlMapping | None, token: str) -> UrlMapping:
     if mapping is None:
-        redirect_cache.pop(token, None)
+        delete_redirect_url(token)
         raise HTTPException(status_code=404, detail="Not Found")
     if mapping.is_deleted:
-        redirect_cache.pop(token, None)
+        delete_redirect_url(token)
         raise HTTPException(status_code=410, detail="Gone")
     if mapping.expires_at is not None and mapping.expires_at <= utc_now():
-        redirect_cache.pop(token, None)
+        delete_redirect_url(token)
         raise HTTPException(status_code=410, detail="Gone")
     return mapping
 
