@@ -17,11 +17,13 @@ from .url_validator import validate_url
 
 router = APIRouter()
 
-BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "auto").rstrip("/")
 
 
 @router.post("/api/qr/create", response_model=CreateResponse)
-def create_qr(req: CreateRequest, db: Session = Depends(get_db)):
+def create_qr(
+    req: CreateRequest, request: Request, db: Session = Depends(get_db)
+):
     try:
         normalized_url = validate_url(req.url)
     except ValueError as e:
@@ -43,14 +45,15 @@ def create_qr(req: CreateRequest, db: Session = Depends(get_db)):
     db.add(mapping)
     db.commit()
 
-    short_url = f"{BASE_URL}/r/{token}"
+    base_url = _public_base_url(request)
+    short_url = f"{base_url}/r/{token}"
 
     set_redirect_url(token, normalized_url)
 
     return CreateResponse(
         token=token,
         short_url=short_url,
-        qr_code_url=f"{BASE_URL}/api/qr/{token}/image",
+        qr_code_url=f"{base_url}/api/qr/{token}/image",
         original_url=normalized_url,
     )
 
@@ -108,9 +111,9 @@ def delete_qr(token: str, db: Session = Depends(get_db)):
 
 
 @router.get("/api/qr/{token}/image")
-def get_qr_image(token: str, db: Session = Depends(get_db)):
+def get_qr_image(token: str, request: Request, db: Session = Depends(get_db)):
     _get_mapping_or_404(token, db)
-    short_url = f"{BASE_URL}/r/{token}"
+    short_url = f"{_public_base_url(request)}/r/{token}"
 
     img = qrcode.make(short_url)
     buf = io.BytesIO()
@@ -170,3 +173,20 @@ def _record_scan(token: str, request: Request, db: Session):
     )
     db.add(event)
     db.commit()
+
+
+def _public_base_url(request: Request) -> str:
+    if PUBLIC_BASE_URL and PUBLIC_BASE_URL != "auto":
+        return PUBLIC_BASE_URL
+
+    host = (
+        request.headers.get("x-forwarded-host")
+        or request.headers.get("host")
+        or request.url.netloc
+    )
+    proto = (
+        request.headers.get("x-forwarded-proto")
+        or request.url.scheme
+        or "http"
+    )
+    return f"{proto}://{host}".rstrip("/")

@@ -22,7 +22,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://qr_user:qr_password@postgres:5432/qr_code
       REDIS_URL: redis://redis:6379/0
-      PUBLIC_BASE_URL: http://localhost:8000
+      PUBLIC_BASE_URL: auto
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,6 +56,18 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles:
+      - ngrok
+    command: ["http", "frontend:3000"]
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - frontend
 
 volumes:
   frontend_node_modules:

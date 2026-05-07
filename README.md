@@ -70,6 +70,22 @@ The API reads `DATABASE_URL`, `REDIS_URL`, and `PUBLIC_BASE_URL` from the Compos
 environment. For non-Docker local development, copy `backend/.env.example` and
 export those variables before starting uvicorn.
 
+### ngrok
+
+To expose the full app through ngrok, set your ngrok auth token and start the
+optional profile:
+
+```bash
+export NGROK_AUTHTOKEN=your_token_here
+docker compose --profile ngrok up --build
+```
+
+The ngrok agent tunnels to the frontend service. The frontend proxies `/api/*`
+and `/r/*` to the API service, so the public ngrok URL can create QR codes,
+render QR images, and handle redirect scans through one HTTPS origin.
+
+You can inspect the ngrok agent locally at http://localhost:4040.
+
 ## Bonus Challenges
 
 - Build a simple frontend (input URL → display QR code image)
