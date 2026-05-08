@@ -6,7 +6,7 @@ services:
       - "3000:3000"
     environment:
       INTERNAL_BACKEND_BASE_URL: http://api:8000
-      NEXT_PUBLIC_BACKEND_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_BACKEND_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8000}
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
@@ -22,7 +22,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://qr_user:qr_password@postgres:5432/qr_code
       REDIS_URL: redis://redis:6379/0
-      PUBLIC_BASE_URL: auto
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,13 +61,13 @@ services:
     image: ngrok/ngrok:latest
     profiles:
       - ngrok
-    command: ["http", "frontend:3000"]
+    command: ["http", "api:8000"]
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
     ports:
       - "4040:4040"
     depends_on:
-      - frontend
+      - api
 
 volumes:
   frontend_node_modules:

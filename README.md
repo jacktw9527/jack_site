@@ -72,17 +72,18 @@ export those variables before starting uvicorn.
 
 ### ngrok
 
-To expose the full app through ngrok, set your ngrok auth token and start the
-optional profile:
+To expose the API and QR redirect URLs through ngrok, set your ngrok auth token
+and start the optional profile:
 
 ```bash
 export NGROK_AUTHTOKEN=your_token_here
+export PUBLIC_BASE_URL=https://your-ngrok-url.ngrok-free.app
 docker compose --profile ngrok up --build
 ```
 
-The ngrok agent tunnels to the frontend service. The frontend proxies `/api/*`
-and `/r/*` to the API service, so the public ngrok URL can create QR codes,
-render QR images, and handle redirect scans through one HTTPS origin.
+The ngrok agent tunnels directly to the API service. The frontend still runs at
+http://localhost:3000 for local management, while generated QR codes and API docs
+use the public `PUBLIC_BASE_URL`.
 
 You can inspect the ngrok agent locally at http://localhost:4040.
 

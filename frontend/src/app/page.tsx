@@ -73,9 +73,9 @@ export default function Home() {
 
   const currentToken = mapping?.token ?? lookupToken.trim();
   const qrImageUrl = mapping
-    ? `${backendBaseUrl}/api/qr/${mapping.token}/image?ts=${encodeURIComponent(
-        mapping.updated_at ?? mapping.token,
-      )}`
+    ? `${
+        mapping.qr_code_url ?? `/api/qr/${mapping.token}/image`
+      }?ts=${encodeURIComponent(mapping.updated_at ?? mapping.token)}`
     : "";
 
   const shortUrl = useMemo(() => {
@@ -143,8 +143,14 @@ export default function Home() {
         `/api/qr/${created.token}`,
       );
 
-      setMapping(nextMapping);
-      hydrateForm(nextMapping);
+      const hydratedMapping = {
+        ...nextMapping,
+        short_url: created.short_url,
+        qr_code_url: created.qr_code_url,
+      };
+
+      setMapping(hydratedMapping);
+      hydrateForm(hydratedMapping);
       setMessage("Created QR mapping.");
       await refreshAnalytics(nextMapping.token);
     } catch (err) {
