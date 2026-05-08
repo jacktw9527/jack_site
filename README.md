@@ -1,25 +1,5 @@
 # QR Code Generator — Exercise
 
-## How to Use
-
-1. Read `PROMPT.md`
-2. Answer the Design Questions (write your answers directly in `PROMPT.md`)
-3. Build the prototype:
-   - **Challenge Track:** Build from scratch using `PROMPT.md` as your spec
-   - **Guided Track:** Go to `scaffold/`, fill in the TODOs
-4. Verify with the curl tests at the bottom of `PROMPT.md`
-5. Bring your Design Questions answers to live session for discussion
-
-## Choose Your Track
-
-**Challenge Track** — You decide the architecture, file structure, and implementation. Any language/framework is OK (Python + FastAPI recommended). Read `PROMPT.md` to get started.
-
-**Guided Track** — File structure and boilerplate are provided. Fill in the core logic marked with `TODO`. Go to `scaffold/` and follow the instructions below.
-
-## Guided Track Setup
-
-**Prerequisite:** Python 3.10 or higher
-
 ```bash
 cd scaffold
 python3 -m venv .venv
